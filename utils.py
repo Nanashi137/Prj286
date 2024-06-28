@@ -34,7 +34,6 @@ def quantization(img, n_cluster = 2):
 def fw_preprocess(img):
     gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
     blur = cv.GaussianBlur(gray, (3,3),0)   
-    _, thresh = cv.threshold(blur, 150, 255, cv.THRESH_BINARY)
     return blur 
      
 
@@ -48,6 +47,103 @@ def text_color(img, n_cluster = 2):
     b, g, r = pixel_value%256, (pixel_value//256)%256, pixel_value//(256**2)
 
     return ('#%02x%02x%02x' % (r, g, b)).upper()
+
+
+def polygon_region(image, bbox): 
+
+    pt1 = (int(bbox[0][0]), int(bbox[0][1]))
+    pt2 = (int(bbox[1][0]), int(bbox[1][1]))
+    pt3 = (int(bbox[2][0]), int(bbox[2][1]))
+    pt4 = (int(bbox[3][0]), int(bbox[3][1]))
+    
+    polygon = [pt1, pt2, pt3, pt4]
+
+
+    mask = np.zeros((image.shape[0], image.shape[1]))
+    if not type(polygon) == type(np.array([])):
+        polygon = np.array(polygon)
+
+    cv.fillConvexPoly(mask, polygon, 1)
+
+
+    b_img = image[:,:,0] * mask 
+    g_img = image[:,:,1] * mask 
+    r_img = image[:,:,2] * mask 
+
+    masked = np.zeros_like(image)
+    masked[:,:,0] = b_img
+    masked[:,:,1] = g_img
+    masked[:,:,2] = r_img
+
+
+    return masked, mask 
+
+
+def rotate_image(image, angle, center):
+    rot_mat = cv.getRotationMatrix2D(center, angle, 1.0)
+    result = cv.warpAffine(image, rot_mat, image.shape[1::-1], flags=cv.INTER_LINEAR)
+    return result
+
+
+def get_rotate_angle(mask):
+    blob = np.transpose(np.nonzero(mask)).astype(float)
+
+    mean, eigenvectors, eigenvalues = cv.PCACompute2(blob, None)
+
+    vectY = np.array(eigenvectors[0])
+    vectX = np.array(eigenvectors[1])
+    
+    center = np.array([int(mean[0,1]), int(mean[0,0])], dtype=np.float64)
+
+    basisX = np.array([1, 0], dtype=np.float32)
+    #basisY = np.array([0, 1], dtype=np.float32)
+
+    angle = np.arccos(np.dot(vectX, basisX))*180/np.pi
+
+    if (vectX[1] < 0):
+        return angle, center
+
+    return -angle, center
+
+
+def get_roi(image, bbox):
+    pt1 = (int(bbox[0][0]), int(bbox[0][1]))
+    pt2 = (int(bbox[1][0]), int(bbox[1][1]))
+    pt3 = (int(bbox[2][0]), int(bbox[2][1]))
+    pt4 = (int(bbox[3][0]), int(bbox[3][1]))
+
+
+    polygon = [pt1, pt2, pt3, pt4]
+    copy = np.copy(image)
+
+    img, mask = polygon_region(copy, polygon)
+
+    rotate_angle, center = get_rotate_angle(mask)
+    
+
+
+    if (rotate_angle>=-1.5 and rotate_angle<=1.5):
+        return image[pt1[1]:pt3[1], pt1[0]:pt3[0]]
+
+
+    rotated_mask = rotate_image(mask, rotate_angle, center)
+    rotated_img  = rotate_image(img, rotate_angle, center)
+
+    
+
+    region = np.transpose(np.nonzero(rotated_mask))
+    top_left = region[0] #+ np.array([1, 1], dtype=np.int64)
+    bottom_right = region[len(region)-1] #- np.array([1, 1], dtype=np.int64)
+
+    result = rotated_img[top_left[0]:bottom_right[0], top_left[1]:bottom_right[1]]
+
+    H,W = result.shape[:2]
+
+    if H > W: 
+        return cv.rotate(result, cv.ROTATE_90_COUNTERCLOCKWISE)
+
+    return result
+
 
 
 def draw_text(img, text,

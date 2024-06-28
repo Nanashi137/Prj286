@@ -1,6 +1,6 @@
 import cv2 as cv 
 import numpy as np
-from utils import getTime, is_overlap, draw_text, fw_preprocess
+from utils import getTime, is_overlap, draw_text, fw_preprocess, get_roi
 import time 
 from  paddleocr  import  PaddleOCR
 from tqdm import tqdm
@@ -17,13 +17,18 @@ black = (0, 0, 0)
 if __name__ == "__main__":
     
 
-    vid = "vid7"
+    vid = "vid1"
 
     # Output files path 
-    frame_information = f"system_output/{vid}/"
+    frame_information = f"test/{vid}/"
     os.mkdir(frame_information)
 
-    text_information = f"results/{vid}.txt"
+    # Text file path
+    text_information = f"test/{vid}.txt"
+
+    # Output video path 
+    ov = f"test/output_{vid}.mp4"
+
 
     cap = cv.VideoCapture(f"./video/{vid}.mp4")
     fps = cap.get(cv.CAP_PROP_FPS) 
@@ -37,7 +42,7 @@ if __name__ == "__main__":
     text_tracking = {}
     delay = 10 #delay between frames
 
-    output_video = cv.VideoWriter( f"./output_videos/output_{vid}.mp4", cv.VideoWriter_fourcc(*'MP4V'), 30, (Wo, Ho)) 
+    output_video = cv.VideoWriter(ov, cv.VideoWriter_fourcc(*'MP4V'), 30, (Wo, Ho)) 
 
 
     st = time.time()
@@ -72,16 +77,18 @@ if __name__ == "__main__":
             Score = [score[1][1] for score in result]
             n_box = 0
             for box, text, score in zip(BoundingBoxes, Texts, Score): 
-                box = np.reshape(np.array(box), (-1, 1, 2)).astype(np.int64)
-                top_left = tuple(box[0][0])
-                bottom_right = tuple(box[2][0])
+                boubox = np.reshape(np.array(box), (-1, 1, 2)).astype(np.int64)
+                top_left = tuple(boubox[0][0])
+                bottom_right = tuple(boubox[2][0])
                 w = bottom_right[0] - top_left[0] 
                 h = bottom_right[1] - top_left[1]
                 bbox = (top_left[0], top_left[1], w, h)
-                if score > 0.95:
+                if score > 0.90:
                     offset = 10
-                    roi = frame[top_left[1]-offset: bottom_right[1]+offset, top_left[0]-offset:bottom_right[0]+offset]
+                    #roi = frame[top_left[1]-offset: bottom_right[1]+offset, top_left[0]-offset:bottom_right[0]+offset]
 
+                    roi = get_roi(frame, box)
+                    
                     try:
                         input_img = fw_preprocess(roi)
                         fw, probs = ensemble_predict(model=fwc, img=input_img)
@@ -91,12 +98,9 @@ if __name__ == "__main__":
                         cv.imwrite(img_path, input_img)
                         
                     except: 
-                        img_path = frame_information + "Frame_" + str(noFrame) + "_box_" + str(n_box) + "_None.jpg"
                         fw = "None"
                         fscore = "None"
-                        #cv.imwrite(img_path, roi)
 
-                
 
                     found = False 
 
@@ -110,7 +114,7 @@ if __name__ == "__main__":
                     if not found: 
                         text_tracking[text] = (bbox, fw, noFrame, noFrame, fscore)
 
-                    cv.polylines(frame, [box], isClosed=True, color=green, thickness=2)
+                    cv.polylines(frame, [boubox], isClosed=True, color=green, thickness=2)
                     draw_text(frame, text, pos= (top_left[0], top_left[1] - 15), font = cv.FONT_HERSHEY_SIMPLEX, font_scale = 1, font_thickness= 2, text_color= green, text_color_bg= black)
                 n_box+=1
             frame = cv.resize(frame, (Wo, Ho))
