@@ -7,6 +7,8 @@ from tqdm import tqdm
 import torch 
 import os 
 
+import difflib
+
 from fwc.inference import load_model, ensemble_predict
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -17,7 +19,7 @@ black = (0, 0, 0)
 if __name__ == "__main__":
     
 
-    vid = "vid1"
+    vid = "vid4"
 
     # Output files path 
     frame_information = f"test/{vid}/"
@@ -107,7 +109,9 @@ if __name__ == "__main__":
                     for tracked_text, info in text_tracking.items(): 
                         tracked_box, _, start_frame, _, _ = info 
 
-                        if tracked_text == text and is_overlap(tracked_box, bbox): 
+                        text_similarity = difflib.SequenceMatcher(None, tracked_text.lower(), text.lower())
+
+                        if text_similarity.ratio()>0.6 and is_overlap(tracked_box, bbox): 
                             text_tracking[tracked_text] = (bbox, fw, start_frame, noFrame, fscore)
                             found = True 
 
