@@ -19,17 +19,17 @@ black = (0, 0, 0)
 if __name__ == "__main__":
     
 
-    vid = "vid4"
+    vid = "vid7" #7
 
     # Output files path 
-    frame_information = f"test/{vid}/"
+    frame_information = f"output_roi/{vid}/"
     os.mkdir(frame_information)
 
     # Text file path
-    text_information = f"test/{vid}.txt"
+    text_information = f"output_video_information/{vid}.txt"
 
     # Output video path 
-    ov = f"test/output_{vid}.mp4"
+    ov = f"output_video/output_{vid}.mp4"
 
 
     cap = cv.VideoCapture(f"./video/{vid}.mp4")
@@ -44,7 +44,7 @@ if __name__ == "__main__":
     text_tracking = {}
     delay = 10 #delay between frames
 
-    output_video = cv.VideoWriter(ov, cv.VideoWriter_fourcc(*'MP4V'), 30, (Wo, Ho)) 
+    #output_video = cv.VideoWriter(ov, cv.VideoWriter_fourcc(*'MP4V'), 30, (Wo, Ho)) 
 
 
     st = time.time()
@@ -54,7 +54,7 @@ if __name__ == "__main__":
     # Loading ultility models
     print("Loading models")
     ocr  =  PaddleOCR (lang = 'en', show_log = False)
-    fwc = load_model("fwc/model/r.ckpt", n_classes= 4, device=device)
+    fwc = load_model("fwc/model/st2.ckpt", n_classes= 4, device=device)
     print("Models loaded")
 
     progress_bar = tqdm(range(int(totalNoFrames)))
@@ -69,7 +69,7 @@ if __name__ == "__main__":
             result = results[0]
             if result is None: 
                 frame = cv.resize(frame, (Wo, Ho))
-                output_video.write(frame)
+                #output_video.write(frame)
                 noFrame +=1 
                 progress_bar.update(1)
                 continue 
@@ -91,38 +91,41 @@ if __name__ == "__main__":
 
                     roi = get_roi(frame, box)
                     
-                    try:
-                        input_img = fw_preprocess(roi)
-                        fw, probs = ensemble_predict(model=fwc, img=input_img)
-                        fscore = max(probs)
-                        img_name = f"{str(text)}_{probs[0]}_{probs[1]}_{probs[2]}_{probs[3]}_{fw}.jpg"
-                        img_path = frame_information + img_name
-                        cv.imwrite(img_path, input_img)
-                        
-                    except: 
-                        fw = "None"
-                        fscore = "None"
+
 
 
                     found = False 
 
                     for tracked_text, info in text_tracking.items(): 
-                        tracked_box, _, start_frame, _, _ = info 
+                        tracked_box, fw, start_frame, _, score = info 
 
                         text_similarity = difflib.SequenceMatcher(None, tracked_text.lower(), text.lower())
 
-                        if text_similarity.ratio()>0.6 and is_overlap(tracked_box, bbox): 
-                            text_tracking[tracked_text] = (bbox, fw, start_frame, noFrame, fscore)
+                        if text_similarity.ratio()>0.7 and is_overlap(tracked_box, bbox): 
+                            text_tracking[tracked_text] = (bbox, fw, start_frame, noFrame, score)
                             found = True 
 
                     if not found: 
+
+                        try:
+                            input_img = fw_preprocess(roi)
+                            fw, probs = ensemble_predict(model=fwc, img=input_img)
+                            fscore = max(probs)
+                            img_name = f"{str(text)}_{probs[0]}_{probs[1]}_{probs[2]}_{probs[3]}_{fw}.jpg"
+                            img_path = frame_information + img_name
+                            cv.imwrite(img_path, input_img)
+                        
+                        except: 
+                            fw = "None"
+                            fscore = "None"
                         text_tracking[text] = (bbox, fw, noFrame, noFrame, fscore)
+
 
                     cv.polylines(frame, [boubox], isClosed=True, color=green, thickness=2)
                     draw_text(frame, text, pos= (top_left[0], top_left[1] - 15), font = cv.FONT_HERSHEY_SIMPLEX, font_scale = 1, font_thickness= 2, text_color= green, text_color_bg= black)
                 n_box+=1
             frame = cv.resize(frame, (Wo, Ho))
-            output_video.write(frame)
+            #output_video.write(frame)
 
         noFrame+=1 
         progress_bar.update(1)
@@ -145,7 +148,7 @@ if __name__ == "__main__":
 
 
     cap.release() 
-    output_video.release()
+    #output_video.release()
     cv.destroyAllWindows() 
 
 

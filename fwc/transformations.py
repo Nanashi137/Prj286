@@ -200,22 +200,6 @@ def get_deepfont_full_transformation() -> A.Compose:
     )
 
 
-def T1() -> A.Compose:
-    return A.Compose(
-        [
-            A.Sequential(
-                [
-                    ResizeHeight(target_height=105, always_apply=True),
-                    #get_deepfont_base_augmentations(),
-                    #get_deepfont_feature_enhancement(),
-                    PickRandomPatch(constrained_patches=False, always_apply=True),
-                    A.ToFloat(255, always_apply=True),
-                    ToTensorV2(always_apply=True),
-                ]
-            ),
-        ]
-    )
-
 def get_random_square_patch_augmentation() -> A.Compose:
     return A.Compose(
         [
@@ -250,8 +234,6 @@ def inference_input(img, squeezing_ratio=2.5):
     img = t5.apply(img)
 
     return img
-
-
 
 
 

@@ -48,7 +48,6 @@ class DeepFontAutoencoder(nn.Module):
         decoded = self.decoder(encoded)
         return decoded
 
-
 class DeepFont(nn.Module):
     def __init__(self, autoencoder: DeepFontAutoencoder, num_classes: int):
         super(DeepFont, self).__init__()

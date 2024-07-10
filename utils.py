@@ -145,7 +145,6 @@ def get_roi(image, bbox):
     return result
 
 
-
 def draw_text(img, text,
           pos=(0, 0),
           font=cv.FONT_HERSHEY_PLAIN,

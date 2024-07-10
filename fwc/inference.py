@@ -9,7 +9,6 @@ import torch.nn.functional as F
 from .transformations import IPtrans, inference_input
 import time
 
-
 LABELS2ID = {'unbold': 0, 'bold': 1, 'italic': 2, 'bold_italic': 3}
 ID2LABELS = {0: 'unbold', 1: 'bold', 2: 'italic', 3: 'bold_italic'}
 

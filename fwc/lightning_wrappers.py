@@ -6,7 +6,6 @@ from .deepfont import DeepFont, DeepFontAutoencoder
 from torchmetrics import Accuracy, F1Score
 from pytorch_lightning.utilities.grads import grad_norm
 
-
 class DeepFontAutoencoderWrapper(L.LightningModule):
     def __init__(self):
         super().__init__()
